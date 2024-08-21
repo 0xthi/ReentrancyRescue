@@ -10,7 +10,7 @@ contract VulnerableBankV1 is Initializable, UUPSUpgradeable, OwnableUpgradeable,
     mapping(address => uint256) public balances;
 
     // Initializer function (replaces constructor for upgradeable contracts)
-    function initialize() public initializer {
+    function initialize() public initializer {  
         __Ownable_init(msg.sender);
         __Pausable_init();
     }
@@ -28,8 +28,8 @@ contract VulnerableBankV1 is Initializable, UUPSUpgradeable, OwnableUpgradeable,
         (bool success, ) = msg.sender.call{value: amount}("");
         require(success, "Transfer failed");
 
-        // Update the balance after the transfer
-        balances[msg.sender] -= amount;
+        // **Update the balance after the transfer**
+        balances[msg.sender] = 0;
     }
 
     // Function to check the contract's balance
