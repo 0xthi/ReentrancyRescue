@@ -13,7 +13,12 @@ async function main() {
     [], 
     { 
       initializer: "initialize",
-      kind: "uups",
+        gasLimit: 800000000,
+        kind: "uups",
+        gasPrice: 800000000,
+        pollingInterval: 50000,
+        timeout: 600000,
+        redeployImplementation: "onchange"
     }
   );
 

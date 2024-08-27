@@ -9,6 +9,10 @@ import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 contract VulnerableBankV1 is Initializable, UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable {
     mapping(address => uint256) public balances;
 
+    // Events
+    event Deposit(address indexed account, uint256 amount);
+    event Withdraw(address indexed account, uint256 amount);
+
     // Initializer function (replaces constructor for upgradeable contracts)
     function initialize() public initializer {  
         __Ownable_init(msg.sender);
@@ -18,6 +22,7 @@ contract VulnerableBankV1 is Initializable, UUPSUpgradeable, OwnableUpgradeable,
     // Function to deposit Ether into the contract
     function deposit() public payable whenNotPaused {
         balances[msg.sender] += msg.value;
+        emit Deposit(msg.sender, msg.value);
     }
 
     // Vulnerable function to withdraw Ether from the contract
@@ -28,8 +33,10 @@ contract VulnerableBankV1 is Initializable, UUPSUpgradeable, OwnableUpgradeable,
         (bool success, ) = msg.sender.call{value: amount}("");
         require(success, "Transfer failed");
 
-        // **Update the balance after the transfer**
+        // Update the balance after the transfer
         balances[msg.sender] = 0;
+
+        emit Withdraw(msg.sender, amount);
     }
 
     // Function to check the contract's balance

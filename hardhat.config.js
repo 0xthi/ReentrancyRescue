@@ -9,6 +9,8 @@ module.exports = {
     settings: {
       optimizer: {
         enabled: true,
+        runs: 5000,
+        details: { yul: false },
       },
     },
   },
@@ -30,8 +32,20 @@ module.exports = {
       gasPrice: "auto",
       accounts: [process.env.PRIVATE_KEY],
     },
+    sepolia: {
+      url: process.env.RPC_URL,
+      chainId: 11155111,
+      gasPrice: "auto", // Example gas price in wei
+      accounts:[process.env.PRIVATE_KEY],
+    },
   },
   etherscan: {
-    apiKey: process.env.BNB_API_KEY,
+    apiKey: process.env.ETHERSCAN_API_KEY,
+  },
+  sourcify: {
+    enabled: true
+  },
+  mocha: {
+    timeout: 40000,
   },
 }

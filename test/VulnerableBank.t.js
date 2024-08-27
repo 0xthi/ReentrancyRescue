@@ -9,7 +9,7 @@ describe("VulnerableBank", function () {
     [owner, addr1, addr2] = await ethers.getSigners();
 
     // Get the contract factories for V1 and V2
-    VulnerableBankV1 = await ethers.getContractFactory("VulnerableBankV1");
+    VulnerableBankV1 = await ethers.getContractFactory("VulnerableBankV1");0
     VulnerableBankV2 = await ethers.getContractFactory("VulnerableBankV2");
 
     // Deploy proxy with V1 as implementation, initializing with the owner
@@ -29,7 +29,7 @@ describe("VulnerableBank", function () {
 
   it("should successfully execute reentrancy attack in V1", async function () {
     // addr1 deposits 10 ether into the already deployed instance (proxy pointing to V1)
-    await instance.connect(addr1).deposit({ value: ethers.parseEther("10") });
+    await instance.connect(addr1).deposit({ value: ethers.parseEther("0.00005") });
 
     // Deploy the attack contract with the proxy instance's address in the constructor
     const AttackContractFactory = await ethers.getContractFactory("Attack");
@@ -37,7 +37,7 @@ describe("VulnerableBank", function () {
     await attackContract.waitForDeployment();
 
     // Use the attack contract to attempt the attack
-    await attackContract.connect(addr1).attack({ value: ethers.parseEther("1") });
+    await attackContract.connect(addr2).attack({ value: ethers.parseEther("0.00001") });
 
     // Check if the balance of the contract (proxy) has been drained
     const finalBalance = await instance.getContractBalance();
@@ -46,7 +46,7 @@ describe("VulnerableBank", function () {
 
   it("should upgrade to V2 and fail reentrancy attack", async function () {
     // Deposit 10 ether into the V1 contract
-    await instance.connect(addr1).deposit({ value: ethers.parseEther("10") });
+    await instance.connect(addr1).deposit({ value: ethers.parseEther("0.00005") });
 
     // Upgrade the contract to V2
     upgraded = await upgrades.upgradeProxy(await instance.getAddress(), VulnerableBankV2.connect(owner));
@@ -62,12 +62,12 @@ describe("VulnerableBank", function () {
 
     // Attempt to execute the reentrancy attack
     await expect(
-      attackContract.connect(addr1).attack({ value: ethers.parseEther("1") })
+      attackContract.connect(addr2).attack({ value: ethers.parseEther("0.00001") })
     ).to.be.revertedWith("Transfer failed");
 
     // Verify the balance in the upgraded contract
     const finalBalance = await upgraded.getContractBalance();
-    expect(finalBalance).to.equal(ethers.parseEther("10")); // Balance should remain the same
+    expect(finalBalance).to.equal(ethers.parseEther("0.00005")); // Balance should remain the same
   });
 
   it("should allow only the owner to pause and unpause the contract", async function () {
