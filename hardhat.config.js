@@ -33,7 +33,7 @@ module.exports = {
       accounts: [process.env.PRIVATE_KEY],
     },
     sepolia: {
-      url: process.env.RPC_URL,
+      url: 'https://eth-sepolia.public.blastapi.io	',
       chainId: 11155111,
       gasPrice: "auto", // Example gas price in wei
       accounts:[process.env.PRIVATE_KEY],
