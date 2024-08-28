@@ -18,11 +18,13 @@ if (fs.existsSync(addressesPath)) {
 
 // Alchemy WebSocket URL
 const ALCHEMY_WEBSOCKET_URL = process.env.ALCHEMY_WEBSOCKET_URL;
-const PRIVATE_KEY = process.env.PRIVATE_KEY;
+const PRIVATE_KEY_1 = process.env.PRIVATE_KEY_1;
+const PRIVATE_KEY_2 = process.env.PRIVATE_KEY_2; // Add this line
 
 // Initialize WebSocket provider
 const provider = new ethers.WebSocketProvider(ALCHEMY_WEBSOCKET_URL);
-const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
+const wallet1 = new ethers.Wallet(PRIVATE_KEY_1, provider);
+const wallet2 = new ethers.Wallet(PRIVATE_KEY_2, provider); // Add this line
 
 const authSigner = new ethers.Wallet(
   "0x2000000000000000000000000000000000000000000000000000000000000000"
@@ -39,63 +41,61 @@ async function main() {
 
   const iface = new ethers.Interface(abi);
   const proxyAddress = addresses.VulnerableBankV1UUPSProxy;
+  const contract = new ethers.Contract(proxyAddress, abi, provider);
+  
+  // Connect the contract to the second wallet
+  const contractWithSigner = contract.connect(wallet2);
 
-  provider.on('pending', async (txHash) => {
-    try {
-      const tx = await provider.getTransaction(txHash);
-      if (tx && tx.to === proxyAddress && tx.data && tx.data.length > 2) {
-        // Try to parse the transaction
-        let decodedTx = null;
-        try {
-          decodedTx = iface.parseTransaction({ data: tx.data });
-        } catch (parseError) {
-          console.error(`Failed to parse transaction data for txHash: ${txHash}`, parseError);
-        }
+  let lastBalance = await provider.getBalance(proxyAddress);
+  const balanceChangeThreshold = ethers.parseEther("0.000005"); // Adjust as needed
+  const timeWindow = 1000; // 1 second
+  let lastWithdrawalTime = 0;
+  let withdrawalCount = 0;
 
-        if (decodedTx) {
-          // Check if the transaction is calling the `withdraw` function
-          let withdrawCount = 0;
-          if (decodedTx.name === "withdraw") {
-            withdrawCount += 1;
-          }
+  // Listen for Withdraw events
+  contract.on("Withdraw", async (account, amount, event) => {
+    const currentTime = Date.now();
+    const currentBalance = await provider.getBalance(proxyAddress);
+    const balanceChange = lastBalance - currentBalance;
 
-          // If more than one withdraw event is detected, pause the contract
-          if (withdrawCount > 1) {
-            console.log('More than one withdraw function call detected. Pausing contract...');
-
-            // Create the transaction to pause the contract
-            const pauseTx = {
-              to: proxyAddress, // Contract address from addresses.json
-              data: iface.encodeFunctionData("pause") // use encodeFunctionData to encode the pause function call
-            };
-
-            // Create a Flashbots bundle
-            const bundle = await flashbotsProvider.signBundle([
-              {
-                signer: wallet,
-                transaction: pauseTx
-              }
-            ]);
-
-            const signedBundle = await flashbotsProvider.sendBundle(bundle, await provider.getBlockNumber() + 1);
-            const response = await signedBundle.wait();
-
-            if (response === 0) {
-              console.log('Transaction included successfully!');
-            } else {
-              console.log('Transaction failed');
-            }
-          }
-        } else {
-          console.log(`Transaction ${txHash} did not match expected function signatures.`);
-        }
-      }
-    } catch (error) {
-      console.error('Error processing transaction:', error);
+    if (currentTime - lastWithdrawalTime <= timeWindow) {
+      withdrawalCount++;
+    } else {
+      withdrawalCount = 1;
     }
+
+    lastWithdrawalTime = currentTime;
+
+    console.log(`Withdrawal detected from ${account}. Amount: ${ethers.formatEther(amount)} ETH`);
+    console.log(`Balance decreased by ${ethers.formatEther(balanceChange)} ETH`);
+    console.log(`Withdrawal count in last ${timeWindow}ms: ${withdrawalCount}`);
+
+    if (withdrawalCount >= 2 || balanceChange >= balanceChangeThreshold) {
+      console.log('Potential reentrancy attack detected!');
+      console.log('Attempting to pause contract...');
+
+      try {
+        const pauseTx = await contractWithSigner.pause();
+        console.log('Pause transaction submitted:', pauseTx.hash);
+        
+        const receipt = await pauseTx.wait();
+        console.log('Pause transaction confirmed in block:', receipt.blockNumber);
+      } catch (error) {
+        console.error('Error while attempting to pause the contract:', error);
+      }
+    }
+
+    lastBalance = currentBalance;
   });
 
-  console.log('Mempool monitoring started...');
+  // Also monitor Deposit events to reset the withdrawal count
+  contract.on("Deposit", (account, amount, event) => {
+    withdrawalCount = 0;
+    console.log(`Deposit detected from ${account}. Amount: ${ethers.formatEther(amount)} ETH`);
+  });
+
+  console.log('Contract event monitoring started...');
 }
 
 main().catch(console.error);
+

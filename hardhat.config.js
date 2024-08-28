@@ -19,24 +19,29 @@ module.exports = {
     localhost: {
       url: "http://127.0.0.1:8545",
     },
-    hardhat: {},
+    hardhat: {
+      mining: {
+        auto: false,
+        interval: 1000,
+      },
+    },
     mumbai: {
       url: "https://rpc-mumbai.maticvigil.com",
       chainId: 80001,
       gasPrice: 20000000000, // Adjust the gasPrice as needed for your tests
-      accounts:[process.env.PRIVATE_KEY],
+      accounts:[process.env.PRIVATE_KEY_1,process.env.PRIVATE_KEY_2],
     },
     bsctest: {
       url: "https://data-seed-prebsc-1-s1.binance.org:8545",
       chainId: 97,
       gasPrice: "auto",
-      accounts: [process.env.PRIVATE_KEY],
+      accounts: [process.env.PRIVATE_KEY_1,process.env.PRIVATE_KEY_2],
     },
     sepolia: {
-      url: 'https://eth-sepolia.public.blastapi.io	',
+      url: 'https://eth-sepolia.public.blastapi.io',
       chainId: 11155111,
       gasPrice: "auto", // Example gas price in wei
-      accounts:[process.env.PRIVATE_KEY],
+      accounts:[process.env.PRIVATE_KEY_1,process.env.PRIVATE_KEY_2],
     },
   },
   etherscan: {
