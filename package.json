@@ -5,10 +5,13 @@
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@openzeppelin/contracts-upgradeable": "^5.0.2",
     "@openzeppelin/hardhat-upgrades": "^3.2.1",
+    "alchemy-sdk": "^3.4.1",
+    "axios": "^1.7.5",
     "dotenv": "^16.4.5",
     "ethers": "^6.7.1",
     "hardhat": "^2.22.9",
-    "nodemailer": "^6.9.14"
+    "nodemailer": "^6.9.14",
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "^3.0.6"

