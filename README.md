@@ -29,6 +29,8 @@ This project is designed to detect and report reentrancy vulnerabilities in Soli
 2. Install dependencies:
    ```
    cd reentrancy-rescue
+   ```
+   ```
    npm install
    ```
 
@@ -53,12 +55,16 @@ This project is designed to detect and report reentrancy vulnerabilities in Soli
 1. Compile and test contracts:
    ```
    npx hardhat compile
+   ```
+   ```
    npx hardhat test
    ```
 
 2. Deploy and verifycontracts:
    ```
    npm hardhat run scripts/deploy.js --network <network_name>
+   ```
+   ```
    npm hardhat verify --network <network_name> <contract_address>
    ```
 
@@ -66,6 +72,8 @@ This project is designed to detect and report reentrancy vulnerabilities in Soli
     Run monitor script and ReentrancyAttack at simulatenous time
    ```
    npx hardhat run services/mempool-monitor.js --network <network_name>
+   ```
+   ```
    npx hardhat run test/ReentrancyAttack.t.js --network <network_name>
    ```
    
