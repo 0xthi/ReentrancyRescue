@@ -76,6 +76,11 @@ This project is designed to detect and report reentrancy vulnerabilities in Soli
    ```
    npx hardhat run test/ReentrancyAttack.t.js --network <network_name>
    ```
+
+4. To manually upgrade contract to V2:
+   ```
+   npx hardhat run scripts/upgrade.js --network <network_name>
+   ```
    
 4. Reports can be found at services/reports
 
