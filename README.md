@@ -62,10 +62,10 @@ This project is designed to detect and report reentrancy vulnerabilities in Soli
 
 2. Deploy and verifycontracts:
    ```
-   npm hardhat run scripts/deploy.js --network <network_name>
+   npx hardhat run scripts/deploy.js --network <network_name>
    ```
    ```
-   npm hardhat verify --network <network_name> <contract_address>
+   npx hardhat verify --network <network_name> <contract_address>
    ```
 
 3. Start monitoring script:
