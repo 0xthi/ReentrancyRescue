@@ -52,8 +52,8 @@ This project is designed to detect and report reentrancy vulnerabilities in Soli
 
 1. Compile and test contracts:
    ```
-   npm hardhat compile
-   npm hardhat test
+   npx hardhat compile
+   npx hardhat test
    ```
 
 2. Deploy and verifycontracts:
@@ -71,4 +71,4 @@ This project is designed to detect and report reentrancy vulnerabilities in Soli
    
 4. Reports can be found at services/reports
 
-5. Database can be found at services/db/reentrancy.db
+5. Database can be found at services/db/reentrancy_rescue.db
