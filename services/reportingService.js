@@ -1,5 +1,5 @@
 const { exec } = require('child_process');
-const fs = require('fs');
+const fs = require('fs').promises;
 const path = require('path');
 const nodemailer = require('nodemailer');
 const sqlite3 = require('sqlite3').verbose();
@@ -18,30 +18,52 @@ const dbPath = path.resolve(__dirname, '../db/reentrancy_rescue.db');
 const db = new sqlite3.Database(dbPath);
 
 async function generateSlitherReport(contractPath) {
-  return new Promise((resolve, reject) => {
-    const projectRoot = path.resolve(__dirname, '..');
-    
-    // Construct the Slither command with necessary options
-    const slitherCommand = `slither "${contractPath}" --solc-remaps "@openzeppelin/=node_modules/@openzeppelin/" --exclude-dependencies --exclude-informational --exclude-low --exclude-optimization --exclude naming-convention`;
+  try {
+    const slitherReportPath = path.resolve(__dirname, '../reports/slither_console_report.json');
 
-    // Set environment variables for the child process
-    const env = {
-      ...process.env,
-      SOLC_VERSION: '0.8.20'
-    };
+    // Delete the existing file if it exists
+    try {
+      await fs.access(slitherReportPath);
+      await fs.unlink(slitherReportPath);
+    } catch (error) {
+      // File doesn't exist, no need to delete
+    }
 
-    exec(slitherCommand, { cwd: projectRoot, env: env }, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`Slither execution error: ${error}`);
-        console.error(`Stderr: ${stderr}`);
-        resolve({ error: error.message, stderr });
-        return;
-      }
-      
-      const formattedReport = formatSlitherReport(stdout);
-      resolve(formattedReport);
+    const slitherCommand = `slither ${contractPath} --solc-remaps "@openzeppelin/=node_modules/@openzeppelin/" --exclude-dependencies --exclude-informational --exclude-low --exclude-optimization --exclude naming-convention --json ${slitherReportPath} --json-types detectors`;
+
+    return new Promise((resolve, reject) => {
+      exec(slitherCommand, async (error, stdout, stderr) => {
+        if (error) {
+          console.error(`Error generating Slither report: ${error.message}`);
+          // Check if the report file was generated despite the error
+          try {
+            await fs.access(slitherReportPath);
+            console.log(`Slither report generated despite error: ${slitherReportPath}`);
+            return resolve(slitherReportPath);
+          } catch (accessError) {
+            return reject(error);
+          }
+        }
+
+        try {
+          // Parse the JSON output
+          const jsonOutput = JSON.parse(stdout);
+          
+          // Write the parsed JSON to a file
+          await fs.writeFile(slitherReportPath, JSON.stringify(jsonOutput, null, 2));
+          
+          console.log(`Slither report generated: ${slitherReportPath}`);
+          resolve(slitherReportPath);
+        } catch (parseError) {
+          console.error(`Error parsing Slither output: ${parseError.message}`);
+          reject(parseError);
+        }
+      });
     });
-  });
+  } catch (error) {
+    console.error(`Error in generateSlitherReport: ${error.message}`);
+    throw error;
+  }
 }
 
 function formatSlitherReport(stdout) {
@@ -51,21 +73,20 @@ function formatSlitherReport(stdout) {
 
   for (const line of lines) {
     if (line.startsWith('INFO:Detectors:')) {
-      if (currentVulnerability) {
+      if (currentVulnerability && currentVulnerability.type.toLowerCase().includes('reentrancy')) {
         vulnerabilities.push(currentVulnerability);
       }
       currentVulnerability = {
         type: line.substring('INFO:Detectors:'.length).trim(),
         description: '',
-        severity: getSeverity(line),
-        suggestedFix: ''
+        severity: getSeverity(line)
       };
     } else if (currentVulnerability && line.trim() !== '') {
       currentVulnerability.description += line.trim() + '\n';
     }
   }
 
-  if (currentVulnerability) {
+  if (currentVulnerability && currentVulnerability.type.toLowerCase().includes('reentrancy')) {
     vulnerabilities.push(currentVulnerability);
   }
 
@@ -78,7 +99,7 @@ function getSeverity(line) {
   return 'Low';
 }
 
-async function sendNotification(subject, message, attachmentPath) {
+async function sendNotification(subject, message, slitherReportPath) {
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: process.env.NOTIFICATION_EMAIL,
@@ -86,8 +107,8 @@ async function sendNotification(subject, message, attachmentPath) {
     text: message,
     attachments: [
       {
-        filename: 'aderyn_report.md',
-        path: attachmentPath
+        filename: 'slither_report.json',
+        path: slitherReportPath
       }
     ]
   };
@@ -188,20 +209,62 @@ function getReentrancyReports() {
   });
 }
 
-function initializeDatabase() {
-  return new Promise((resolve, reject) => {
+async function initializeDatabase() {
+  try {
     const schemaPath = path.resolve(__dirname, '../db/schema.sql');
-    const schema = fs.readFileSync(schemaPath, 'utf8');
+    const schema = await fs.readFile(schemaPath, 'utf8');
     db.exec(schema, (err) => {
       if (err) {
         console.error('Error initializing database:', err);
-        reject(err);
+        throw err;
       } else {
         console.log('Database initialized successfully');
-        resolve();
       }
     });
-  });
+  } catch (error) {
+    console.error(`Error in initializeDatabase: ${error.message}`);
+    throw error;
+  }
+}
+
+async function generateConciseReport(contractAddress) {
+  const reentrancyReports = await getReentrancyReports();
+  const totalStolenAmount = reentrancyReports.reduce((sum, report) => sum + report.stolen_amount, 0);
+  
+  const pauseStatus = await getPauseStatus(contractAddress);
+
+  return {
+    reentrancyReports,
+    totalStolenAmount,
+    pauseStatus
+  };
+}
+
+async function getPauseStatus(contractAddress) {
+  const WEBSOCKET_RPC_URL = process.env.WEBSOCKET_RPC_URL;
+  const provider = new ethers.WebSocketProvider(WEBSOCKET_RPC_URL);
+
+  const artifactPath = path.resolve(__dirname, '../artifacts/contracts/VulnerableBankV1.sol/VulnerableBankV1.json');
+  const contractJson = JSON.parse(await fs.readFile(artifactPath, 'utf-8'));
+  const abi = contractJson.abi;
+
+  const contract = new ethers.Contract(contractAddress, abi, provider);
+  return await contract.paused();
+}
+
+async function sendConciseNotification(contractAddress) {
+  const report = await generateConciseReport(contractAddress);
+  const subject = `Reentrancy Alert for ${contractAddress}`;
+  const message = `
+Reentrancy Reports:
+${report.reentrancyReports.map(r => `- Transaction: ${r.transaction_hash}, Stolen: ${r.stolen_amount}`).join('\n')}
+
+Total Stolen Amount: ${report.totalStolenAmount}
+
+Contract Pause Status: ${report.pauseStatus ? 'Paused' : 'Active'}
+  `;
+
+  await sendNotification(subject, message);
 }
 
 module.exports = {
@@ -213,5 +276,7 @@ module.exports = {
   logPauseEvent,
   logMonitoredTransaction,
   getReentrancyReports,
-  initializeDatabase
+  initializeDatabase,
+  sendConciseNotification,
+  getPauseStatus
 };

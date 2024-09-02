@@ -19,12 +19,7 @@ module.exports = {
     localhost: {
       url: "http://127.0.0.1:8545",
     },
-    hardhat: {
-      mining: {
-        auto: false,
-        interval: 1000,
-      },
-    },
+    hardhat: {},
     mumbai: {
       url: "https://rpc-mumbai.maticvigil.com",
       chainId: 80001,
