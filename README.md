@@ -1,6 +1,6 @@
 # Reentrancy Rescue
 
-This project is designed to detect and report reentrancy vulnerabilities in Solidity smart contracts. It uses a combination of Slither analysis, database storage, and email notification to identify and report these vulnerabilities.
+This project is designed to detect and report reentrancy vulnerabilities in Solidity smart contracts. It uses a combination of Slither analysis, database storage, and email notification to identify and report these vulnerabilities. Tested in Sepolia testnet.
 
 ## Features
 
@@ -17,6 +17,7 @@ This project is designed to detect and report reentrancy vulnerabilities in Soli
 - npm (v6.0 or later recommended)
 - Solidity compiler (v0.8.0 or later recommended)
 - Slither (latest version recommended)
+- Any RPC provider for Ethereum, BSC, Polygon, etc.
 
 ### Installation
 
