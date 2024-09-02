@@ -80,3 +80,5 @@ This project is designed to detect and report reentrancy vulnerabilities in Soli
 4. Reports can be found at services/reports
 
 5. Database can be found at services/db/reentrancy_rescue.db
+
+### DEMO VIDEO :- https://www.loom.com/share/766c8bbf68624a148a7f35e08d3f2b8e?sid=7be8c033-5d9d-48eb-9715-7a105750fa7c
